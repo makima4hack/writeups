@@ -71,3 +71,6 @@ Gracias a esta última ejecución se consigue acceso a la máquina como `root`.
 ---
 
 ## 🗒️ Lecciones aprendidas
+- Ataques de fuerza bruta con hydra.
+- Mejora deductiva al tratar de fijarse en el significado de los textos.
+- Escalada de privilegios con `sudo -u`.
