@@ -1,76 +1,108 @@
 # WriteUp - HedgeHog
 
 **Objetivos**
-- Ganar acceso a la máquina por SSH.
-- Escalada de privilegios.
+
+* Obtener acceso al sistema mediante SSH.
+* Realizar una escalada de privilegios hasta `root`.
 
 ---
 
-## 🔎 Reconocimiento
-Se usa `nmap -sS -Pn -n -sC -sV --top-ports 40 --open 172.17.0.2`
+# 🔎 Reconocimiento
+
+Se realiza un escaneo inicial con:
+
+```bash
+nmap -sS -Pn -n -sC -sV --top-ports 40 --open 172.17.0.2
+```
 
 > [!TIP]
-> Se usan parámetros para mejorar el sigilo, descubrimiento de versiones y servicios y para evitar el ping y la resolución de DNS. También se emplean los 40 puertos más comunes y que solo reporte los abiertos.
+> Se emplean parámetros orientados al sigilo, detección de versiones y enumeración de servicios, evitando además el ping y la resolución DNS. También se limitan las pruebas a los 40 puertos más comunes y únicamente se muestran aquellos que se encuentran abiertos.
 
-![step_01](Screenshots/step_01.png)
+![step\_01](Screenshots/step_01.png)
 
-Se obtienen datos sobre servicios `SSH` y `HTTP` en los puertos `22` y `80` respectivamente.
+El escaneo revela la presencia de los servicios `SSH` y `HTTP` en los puertos `22` y `80` respectivamente.
 
-**Acceso a la web**
+## Acceso al servicio web
 
-Usando la información obtenida por nmap, se accede a la web, dónde figura una palabra `tails`.
+Con la información obtenida mediante nmap, se accede al servicio web, donde aparece la palabra `tails`.
 
-![step_02](Screenshots/step_02.png)
+![step\_02](Screenshots/step_02.png)
 
 > [!NOTE]
-> Se intuye que `tails` puede referirse al nombre de usuario del servicio SSH.
+> Se deduce que `tails` podría corresponder a un usuario válido del servicio SSH.
 
 ---
 
-## 💣 Explotación
-Con la información recogida, se utiliza hydra para tratar de averiguar la contraseña de `tails` por fuerza bruta.
+# 💣 Explotación
+
+Con la información recopilada, se realiza un ataque de fuerza bruta con Hydra contra el usuario `tails`.
 
 ```bash
 hydra -l tails -P /usr/share/dict/rockyou.txt ssh://172.17.0.2
 ```
+
 > [!NOTE]
-> Se observa que el escaneo se demora demasiado. Dado que el usuario es `tails` se intuye que podría tener algo que ver con el final del archivo, por lo que se prueba a invertir el `rockyou.txt`.
+> El ataque tarda demasiado tiempo en producir resultados. Debido al nombre del usuario (`tails`), se plantea la posibilidad de que la contraseña se encuentre al final del diccionario, por lo que se decide invertir el contenido de `rockyou.txt`.
 
 > [!IMPORTANT]
-> Al principio se invierte con `tac /usr/share/dict/rockyou.txt > reverse_rockyou.txt` pero se observan espacios vacíos en algunas contraseñas, por lo que se emplea.
-> `tac /usr/share/dict/rockyou.txt | tr -d ' ' > reverse_rockyou.txt`
+> Inicialmente se prueba el siguiente comando:
+>
+> ```bash
+> tac /usr/share/dict/rockyou.txt > reverse_rockyou.txt
+> ```
+>
+> Sin embargo, se detectan espacios en blanco en algunas entradas del diccionario, por lo que finalmente se emplea:
+>
+> ```bash
+> tac /usr/share/dict/rockyou.txt | tr -d ' ' > reverse_rockyou.txt
+> ```
 
-![step_03](Screenshots/step_03.png)
+![step\_03](Screenshots/step_03.png)
 
-Se lanza nuevamente hydra, pero esta vez con el diccionario invertido.
+A continuación, se ejecuta nuevamente Hydra utilizando el diccionario invertido.
 
-![step_05](Screenshots/step_05.png)
+![step\_05](Screenshots/step_05.png)
 
-Con esto se obtiene la contraseña `3117548331` para el usuario `tails`.
+El ataque permite obtener las credenciales del usuario `tails`, cuya contraseña es:
+
+```text
+3117548331
+```
 
 ---
 
-## 🔑 Acceso y Escalada de privilegios
-Usamos las credenciales obtenidas para tratar de acceder por SSH a la máquina.
+# 🔑 Acceso y Escalada de privilegios
 
-![step_06](Screenshots/step_06.png)
+Con las credenciales obtenidas, se intenta acceder por SSH al sistema.
 
-Se obtiene acceso como `tails`. Inmediatamente después se usa un `sudo -l` para comprobar si existen binarios que se puedan ejectuar como `root` sin contraseña.
+![step\_06](Screenshots/step_06.png)
 
-![step_07](Screenshots/step_07.png)
+El acceso se realiza correctamente como el usuario `tails`.
 
-Se averigua que `tails` no puede hacerlo, pero el usuario `sonic` si. Se busca información sobre como usar `sudo -u` correctamente y se intenta realizar una escalada de la siguiente forma.
+A continuación, se ejecuta `sudo -l` para comprobar los privilegios sudo disponibles.
 
-![step_08](Screenshots/step_08.png)
+![step\_07](Screenshots/step_07.png)
 
-Gracias a esta última ejecución se consigue acceso a la máquina como `root`.
+Se comprueba que el usuario `tails` no dispone de privilegios sudo directos, pero sí puede ejecutar comandos como el usuario `sonic`.
+
+Tras identificar este comportamiento, se prueba la ejecución de comandos como `sonic` mediante `sudo -u`.
+
+![step\_08](Screenshots/step_08.png)
+
+```bash
+sudo -u sonic sudo su
+```
+
+La ejecución permite obtener una shell con privilegios de `root`.
 
 > [!TIP]
-> Se investiga también el usuario `sonic` y se descubre un archivo dentro de documentos con la contraseña del mismo.
+> Durante la enumeración también se identifica un archivo perteneciente al usuario `sonic` que contiene sus credenciales.
 
 ---
 
-## 🗒️ Lecciones aprendidas
-- Ataques de fuerza bruta con hydra.
-- Mejora deductiva al tratar de fijarse en el significado de los textos.
-- Escalada de privilegios con `sudo -u`.
+# 🗒️ Lecciones aprendidas
+
+* Uso de Hydra para ataques de fuerza bruta sobre servicios SSH.
+* Importancia del razonamiento contextual durante la explotación.
+* Manipulación de diccionarios utilizando herramientas como `tac` y `tr`.
+* Escalada de privilegios mediante `sudo -u`.
