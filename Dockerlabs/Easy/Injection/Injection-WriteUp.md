@@ -4,6 +4,8 @@
 
 El objetivo de la máquina **injection** es explotar una vulnerabilidad de **SQL Injection** para obtener acceso inicial al sistema y, posteriormente, escalar privilegios hasta `root`.
 
+---
+
 ## Enumeración
 
 Comenzamos realizando un escaneo con `nmap` sobre la máquina objetivo para identificar los servicios expuestos.
@@ -22,6 +24,8 @@ En el puerto `80` se identifica un servidor **Apache 2.4.52**.
 
 > [!NOTE]
 > Aunque la versión de Apache identificada fue revisada por si existían vulnerabilidades conocidas asociadas, finalmente la vía de explotación no se basó en el servicio Apache como tal, sino en una SQL Injection presente en el panel de autenticación web.
+
+---
 
 ## Enumeración web
 
@@ -45,6 +49,8 @@ Para comprobar el número de columnas de la consulta, se puede utilizar `ORDER B
 
 Al fallar con `ORDER BY 3`, sabemos que la consulta original devuelve 2 columnas.
 
+---
+
 ## Explotación de SQL Injection
 
 Una vez identificado que la consulta devuelve 2 columnas, utilizamos una inyección `UNION SELECT` para extraer información desde `information_schema.schemata`.
@@ -67,6 +73,8 @@ Usuario: dylan
 Contraseña: KJSDFG789FGSDF78
 ```
 
+---
+
 ## Acceso inicial por SSH
 
 Probamos las credenciales obtenidas contra el servicio SSH expuesto en la máquina:
@@ -78,6 +86,8 @@ ssh dylan@172.17.0.2
 Introducimos la contraseña obtenida previamente y conseguimos acceso al sistema como el usuario `dylan`.
 
 ![08](Screenshots/08.png)
+
+---
 
 ## Enumeración local
 
@@ -106,6 +116,8 @@ Entre los binarios encontrados, detectamos `/usr/bin/env` con permisos SUID:
 > [!NOTE]
 > Para agilizar el análisis de los binarios SUID encontrados, utilicé IA como apoyo para priorizar posibles vectores de escalada. Tras identificar `/usr/bin/env` como candidato interesante, validé la técnica consultando GTFOBins y comprobando su comportamiento en la máquina.
 
+---
+
 ## Escalada de privilegios
 
 Al revisar el binario `/usr/bin/env`, comprobamos que puede ser abusado para ejecutar una shell preservando privilegios.
@@ -116,6 +128,9 @@ Según GTFOBins, si `env` tiene permisos SUID, podemos ejecutar una shell privil
 env /bin/sh -p
 ```
 ![10](Screenshots/10.png)
+
+> [!TIP]
+> Se aprende porque se puede usar el binario `/usr/bin/env` para escalar privilegios. Dado que se usa para ejecutar un programa en un entorno determinado y tiene `SUID` activado.
 
 Tras ejecutar el comando, comprobamos nuestra identidad efectiva:
 
@@ -133,6 +148,8 @@ whoami
 
 El resultado confirma que somos `root`.
 
+---
+
 ## Comprobación de acceso como root
 
 Finalmente, verificamos que tenemos acceso al directorio `/root`:
@@ -144,6 +161,8 @@ ls -la /root
 
 Podemos listar el contenido del directorio, confirmando que la escalada de privilegios se ha realizado correctamente.
 
+---
+
 ## Conclusión
 
 La máquina **injection** fue comprometida inicialmente mediante una vulnerabilidad de **SQL Injection** en el panel de autenticación web.
@@ -153,3 +172,12 @@ A través de la inyección, se obtuvieron credenciales válidas para el usuario 
 Una vez dentro, se intentó enumerar permisos con `sudo`, pero el comando no estaba disponible. Posteriormente, se identificó el binario `/usr/bin/env` con permisos SUID. Abusando de este binario mediante la técnica documentada en GTFOBins, fue posible obtener una shell con privilegios efectivos de `root`.
 
 De esta forma, se completó el objetivo de la máquina: obtener acceso inicial mediante SQL Injection y escalar privilegios hasta `root`.
+
+---
+
+## Lecciones Aprendidas
+
+- Aplicación de **SQLi**.
+- Escalada de privilegios abusando de **SUID**.
+- Aprender como funciona el binario `env`.
+
