@@ -1,4 +1,4 @@
-# Writeup - injection
+# Writeup - Injection
 
 ## Objetivo
 
@@ -11,6 +11,7 @@ Comenzamos realizando un escaneo con `nmap` sobre la máquina objetivo para iden
 ```bash
 sudo nmap -sS -Pn -n -sC -sV --top-ports 50 --open 172.17.0.2
 ```
+![02](Screenshot/02.png)
 
 El escaneo muestra dos puertos abiertos:
 
@@ -19,6 +20,9 @@ El escaneo muestra dos puertos abiertos:
 
 En el puerto `80` se identifica un servidor **Apache 2.4.52**.
 
+> [!NOTE]
+> Aunque la versión de Apache identificada fue revisada por si existían vulnerabilidades conocidas asociadas, finalmente la vía de explotación no se basó en el servicio Apache como tal, sino en una SQL Injection presente en el panel de autenticación web.
+
 ## Enumeración web
 
 Accedemos al servicio web desde el navegador:
@@ -26,6 +30,7 @@ Accedemos al servicio web desde el navegador:
 ```text
 http://172.17.0.2
 ```
+![03](Screenshots/03.png)
 
 En la página principal encontramos un panel de autenticación. Dado que el objetivo del laboratorio es explotar una **SQL Injection**, probamos directamente una inyección sobre el formulario de login.
 
